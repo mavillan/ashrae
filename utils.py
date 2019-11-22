@@ -67,3 +67,14 @@ def get_model_params(model_class_name):
                 "min_rows":20,
                 "distribution":"gaussian",
                 "verbose":True}
+
+
+def get_gs_hyperparams(model_class_name):
+    if model_class_name == "LightGBMForecaster":
+        return {"num_leaves":(2**np.arange(5, 10.1, 0.5)).astype(int),
+                "learning_rate":[0.05, 0.1, 0.2],
+                "min_data_in_leaf":[20,50]}
+
+def get_gs_hyperparams_fixed(model_class_name):
+    if model_class_name == "LightGBMForecaster":
+        return {"num_iterations":5000}
