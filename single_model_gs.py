@@ -47,7 +47,7 @@ gs_kwargs = {"model_class":model_class,
              "ts_uid_columns":["building_id","meter"],
              "detrend":False,
              "target_scaler":None,
-             "n_jobs":-1,
+             "n_jobs":1,
              "hyperparams":get_gs_hyperparams(model_class_name),
              "hyperparams_fixed":get_gs_hyperparams_fixed(model_class_name)}
 gs = GridSearch(**gs_kwargs)
