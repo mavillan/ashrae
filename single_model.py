@@ -73,10 +73,10 @@ submission = (predictions
               .loc[:, ["row_id","y_pred"]]
               .rename({"y_pred":"meter_reading"}, axis=1))
 timestamp = datetime.now().strftime("%Y/%m/%d, %H:%M:%S").replace("/","-").replace(" ","")
-submission.to_csv(f"results/preds_sm_{model_class_name}_{timestamp}.csv.gz", 
+submission.to_csv(f"results/{model_class_name}_sm_{timestamp}.csv.gz", 
                   index=False, 
                   compression="gzip")
-handler = open(f"results/preds_sm_{model_class_name}_{timestamp}.meta", "w")
+handler = open(f"results/{model_class_name}_sm_{timestamp}.meta", "w")
 handler.write(f"model_params: {fcaster.model_params}\n")
 handler.write(f"input_features: {fcaster.input_features}\n")
 handler.close()
