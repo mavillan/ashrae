@@ -41,10 +41,10 @@ def get_model_params(model_class_name):
     elif model_class_name == "LightGBMForecaster":
         return {"boosting_type":"gbrt",
                 "objective":"regression",
-                "num_iterations":1000,
-                "num_leaves":40,
+                "num_iterations":50,
+                "num_leaves":724,
                 "min_data_in_leaf":20,
-                "learning_rate":0.3,
+                "learning_rate":0.1,
                 "feature_fraction":1.0,
                 "verbosity":1}
     elif model_class_name == "XGBoostForecaster":
@@ -72,9 +72,10 @@ def get_model_params(model_class_name):
 def get_gs_hyperparams(model_class_name):
     if model_class_name == "LightGBMForecaster":
         return {"num_leaves":(2**np.arange(5, 10.1, 0.5)).astype(int),
-                "learning_rate":[0.05, 0.1, 0.2],
+                "learning_rate":[0.01, 0.05, 0.1],
                 "min_data_in_leaf":[20,50]}
 
 def get_gs_hyperparams_fixed(model_class_name):
     if model_class_name == "LightGBMForecaster":
-        return {"num_iterations":5000}
+        return {"num_iterations":2000,
+                "early_stopping_round":30}
