@@ -4,7 +4,8 @@ import argparse
 import pandas as pd
 from datetime import datetime
 from tsforest import forecaster
-from utils import reduce_mem_usage, get_model_params
+from utils import reduce_mem_usage
+from config import get_model_params
 
 AVAILABLE_CLASSES = ["CatBoostForecaster",
                      "LightGBMForecaster",

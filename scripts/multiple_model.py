@@ -9,10 +9,10 @@ from datetime import datetime
 from tsforest import forecaster
 from tsforest.grid_search import GridSearch
 from tsforest.utils import make_time_range
-from utils import (reduce_mem_usage, 
-                   get_model_params,
-                   get_gs_hyperparams,
-                   get_gs_hyperparams_fixed)
+from utils import reduce_mem_usage 
+from config import (get_model_params,
+                    get_gs_hyperparams,
+                    get_gs_hyperparams_fixed)
 
 AVAILABLE_CLASSES = ["CatBoostForecaster",
                      "LightGBMForecaster",
