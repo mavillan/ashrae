@@ -11,6 +11,7 @@ from utils import (reduce_mem_usage,
                    get_model_params,
                    get_gs_hyperparams,
                    get_gs_hyperparams_fixed)
+from sklearn.model_selection import StratifiedKFold
 
 AVAILABLE_CLASSES = ["CatBoostForecaster",
                      "LightGBMForecaster",
@@ -34,7 +35,6 @@ print("[INFO] loading data")
 tic = time.time()
 train_data = pd.read_hdf('data/train_data_nw.h5', 'train_data')
 train_data.rename({"timestamp":"ds", "meter_reading":"y"}, axis=1, inplace=True)
-valid_period = make_time_range("2016-10-01 00:00:00", "2016-12-31 23:00:00", freq="H")
 tac = time.time()
 print(f"[INFO] time elapsed loading data: {(tac-tic)/60.} min.\n")
 
@@ -55,10 +55,17 @@ for meter in np.sort(train_data.meter.unique()):
     train_data_cut = (train_data.query("meter == @meter")
                       .drop("meter", axis=1))
 
+    print("[INFO] generating validation data")
+    tic = time.time()
+    splitter = StratifiedKFold(n_splits=4, shuffle=False, random_state=23)
+    valid_indexes = [valid_index for _,valid_index in splitter.split(train_data_cut, train_data_cut['building_id'])]
+    tac = time.time()
+    print(f"[INFO] time elapsed generating validation data: {(tac-tic)/60.} min.\n")
+
     gs = GridSearch(**gs_kwargs)
     print("[INFO] fitting the grid of models")
     tic = time.time()
-    gs.fit(train_data=train_data_cut, valid_period=valid_period, metric="rmsle")
+    gs.fit(train_data=train_data_cut, valid_indexes=valid_indexes, metric="rmsle")
     tac = time.time()
     print(f"[INFO] time elapsed fitting the model: {(tac-tic)/60.} min.\n")
 

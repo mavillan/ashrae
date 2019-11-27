@@ -71,11 +71,13 @@ def get_model_params(model_class_name):
 
 def get_gs_hyperparams(model_class_name):
     if model_class_name == "LightGBMForecaster":
-        return {"num_leaves":(2**np.arange(5, 10.1, 0.5)).astype(int),
-                "learning_rate":[0.01, 0.05, 0.1],
-                "min_data_in_leaf":[20,50]}
+        return {"num_leaves":(2**np.arange(5, 11.1, 0.5)).astype(int),
+                "learning_rate":[0.01, 0.05, 0.1, 0.2],
+                "min_data_in_leaf":[20, 50],
+                "feature_fraction":[0.9, 1.0],
+                "lambda_l2":[0., 1.]}
 
 def get_gs_hyperparams_fixed(model_class_name):
     if model_class_name == "LightGBMForecaster":
-        return {"num_iterations":2000,
-                "early_stopping_round":30}
+        return {"num_iterations":1000,
+                "early_stopping_round":100}
