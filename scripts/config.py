@@ -10,7 +10,8 @@ def get_model_params(model_class_name):
     elif model_class_name == "LightGBMForecaster":
         return {"boosting_type":"gbrt",
                 "objective":"regression",
-                "num_iterations":50,
+                "num_iterations":1000,
+                "early_stopping_round":100,
                 "num_leaves":724,
                 "min_data_in_leaf":20,
                 "learning_rate":0.1,
