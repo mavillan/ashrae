@@ -3,12 +3,12 @@ import time
 import argparse
 import numpy as np
 import pandas as pd
+import h5py
 from datetime import datetime
 from tsforest import forecaster
 from tsforest.metrics import compute_rmse, compute_rmsle
 from utils import reduce_mem_usage
 from config import get_model_params
-from sklearn.model_selection import StratifiedKFold
 
 # timestamp of the starting execution time
 timestamp = datetime.now().strftime("%Y/%m/%d, %H:%M:%S").replace("/","-").replace(" ","")
@@ -49,12 +49,13 @@ test_data.rename({"timestamp":"ds"}, axis=1, inplace=True)
 tac = time.time()
 print(f"[INFO] time elapsed loading data: {(tac-tic)/60.} min.\n")
 
-print("[INFO] generating validation data")
+print("[INFO] loading validation data")
 tic = time.time()
-splitter = StratifiedKFold(n_splits=4, shuffle=True, random_state=23)
-valid_indexes = [valid_index for _,valid_index in splitter.split(train_data, train_data['building_id'])]
+h5f = h5py.File("data/valid_sm_skfold_4fold_shuffle.h5", "r")
+valid_indexes = [h5f[key][:] for key in h5f.keys()]
+h5f.close()
 tac = time.time()
-print(f"[INFO] time elapsed generating validation data: {(tac-tic)/60.} min.\n")
+print(f"[INFO] time elapsed loading validation data: {(tac-tic)/60.} min.\n")
 
 model_kwargs = {"model_params":get_model_params(model_class_name),
                 "feature_sets":['calendar', 'calendar_cyclical'],
@@ -92,7 +93,7 @@ for i,valid_index in enumerate(valid_indexes):
         valid_predictions["y_pred"] = np.expm1(valid_predictions["y_pred"].values)
     idx = valid_predictions.query("y_pred < 0").index
     valid_predictions.loc[idx, "y_pred"] = 0
-    valid_error = compute_rmsle(train_data.loc[valid_index, "meter_reading"].values, 
+    valid_error = compute_rmsle(train_data.loc[valid_index, "y"].values, 
                                 valid_predictions.y_pred.values)
     print(f"[INFO] validation error on fold{i}: {valid_error}")
     logger.write(f"validation error on fold{i}: {valid_error}\n")
