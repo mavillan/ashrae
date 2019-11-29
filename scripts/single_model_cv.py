@@ -26,7 +26,6 @@ parser.add_argument("-lt",
                     "--log_transform", 
                     action='store_true')
 args = parser.parse_args()
-print(args.log_transform)
 
 model_class_name = args.model_class
 if model_class_name not in AVAILABLE_CLASSES:
@@ -89,11 +88,13 @@ for i,valid_index in enumerate(valid_indexes):
     tic = time.time()
     valid_predictions = fcaster.predict(train_data.loc[valid_index, test_data.columns])
     if args.log_transform:
-        valid_predictions["y_pred"] = np.expm1(valid_predictions["y_pred"].values)
-    idx = valid_predictions.query("y_pred < 0").index
-    valid_predictions.loc[idx, "y_pred"] = 0
-    valid_error = compute_rmsle(train_data.loc[valid_index, "y"].values, 
-                                valid_predictions.y_pred.values)
+        y_real = np.expm1(train_data.loc[valid_index, "y"].values)
+        y_pred_val = np.expm1(valid_predictions["y_pred"].values)
+    else:
+        y_real = train_data.loc[valid_index, "y"].values
+        y_pred_val = valid_predictions["y_pred"].values
+    y_pred_val[y_pred_val<0] = 0   
+    valid_error = compute_rmsle(y_real, y_pred_val)
     print(f"[INFO] validation error on fold{i}: {valid_error}")
     logger.write(f"validation error on fold{i}: {valid_error}\n")
     logger.write(f"best_iteration on fold {i}: {fcaster.best_iteration}\n")
