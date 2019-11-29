@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 from datetime import datetime
 from tsforest import forecaster
+from tsforest.metrics import compute_rmse, compute_rmsle
 from utils import reduce_mem_usage
 from config import get_model_params
 from sklearn.model_selection import StratifiedKFold
@@ -16,6 +17,11 @@ AVAILABLE_CLASSES = ["CatBoostForecaster",
                      "LightGBMForecaster",
                      "XGBoostForecaster",
                      "H2OGBMForecaster"]
+
+if "--log_transform" in sys.argv:
+    log_transform = True
+else: 
+    log_transform = False
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-m",
@@ -36,6 +42,8 @@ print("[INFO] loading data")
 tic = time.time()
 train_data = pd.read_hdf('data/train_data.h5', 'train_data')
 train_data.rename({"timestamp":"ds", "meter_reading":"y"}, axis=1, inplace=True)
+if log_transform:
+    train_data["y"] = np.log1p(train_data["y"].values)
 test_data = pd.read_hdf('data/test_data.h5', 'test_data')
 test_data.rename({"timestamp":"ds"}, axis=1, inplace=True)
 tac = time.time()
@@ -43,7 +51,7 @@ print(f"[INFO] time elapsed loading data: {(tac-tic)/60.} min.\n")
 
 print("[INFO] generating validation data")
 tic = time.time()
-splitter = StratifiedKFold(n_splits=4, shuffle=False, random_state=23)
+splitter = StratifiedKFold(n_splits=4, shuffle=True, random_state=23)
 valid_indexes = [valid_index for _,valid_index in splitter.split(train_data, train_data['building_id'])]
 tac = time.time()
 print(f"[INFO] time elapsed generating validation data: {(tac-tic)/60.} min.\n")
@@ -52,7 +60,7 @@ model_kwargs = {"model_params":get_model_params(model_class_name),
                 "feature_sets":['calendar', 'calendar_cyclical'],
                 "exclude_features":["year","days_in_month"],
                 "categorical_features":{"building_id":"default",
-                                        "meter":"OneHotEncoder",
+                                        "meter":"default",
                                         "site_id":"default",
                                         "primary_use":"default"},
                 "ts_uid_columns":["building_id","meter"],
@@ -79,8 +87,15 @@ for i,valid_index in enumerate(valid_indexes):
 
     print(f"[INFO] evaluating the model - fold: {i}")
     tic = time.time()
-    valid_error = fcaster.evaluate(train_data.loc[valid_index, :], metric="rmsle")
-    logger.write(f"error on fold {i}: {valid_error}\n")
+    valid_predictions = fcaster.predict(train_data.loc[valid_index, test_data.columns])
+    if log_transform:
+        valid_predictions["y_pred"] = np.expm1(valid_predictions["y_pred"].values)
+    idx = valid_predictions.query("y_pred < 0").index
+    valid_predictions.loc[idx, "y_pred"] = 0
+    valid_error = compute_rmsle(train_data.loc[valid_index, "meter_reading"].values, 
+                                valid_predictions.y_pred.values)
+    print(f"[INFO] validation error on fold{i}: {valid_error}")
+    logger.write(f"validation error on fold{i}: {valid_error}\n")
     logger.write(f"best_iteration on fold {i}: {fcaster.best_iteration}\n")
     tac = time.time()
     print(f"[INFO] time elapsed evaluating the model: {(tac-tic)/60.} min.\n")
@@ -88,12 +103,14 @@ for i,valid_index in enumerate(valid_indexes):
     print(f"[INFO] predicting - fold: {i}")
     tic = time.time()
     predictions = fcaster.predict(test_data)
+    if log_transform:
+        predictions["y_pred"] = np.expm1(predictions["y_pred"].values)
     idx = predictions.query("y_pred < 0").index
     predictions.loc[idx, "y_pred"] = 0
     tac = time.time()
     print(f"[INFO] time elapsed predicting: {(tac-tic)/60.} min.\n")
     
-    fcaster.save_model(f"results/{model_class}_fold{i}_{timestamp}.model")
+    fcaster.save_model(f"results/{model_class_name}_smcv_{timestamp}.model_fold{i}")
     all_predictions.append(predictions.y_pred.values)
 
 logger.write(f"model_params: {fcaster.model_params}\n")
