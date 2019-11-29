@@ -18,16 +18,15 @@ AVAILABLE_CLASSES = ["CatBoostForecaster",
                      "XGBoostForecaster",
                      "H2OGBMForecaster"]
 
-if "--log_transform" in sys.argv:
-    log_transform = True
-else: 
-    log_transform = False
-
 parser = argparse.ArgumentParser()
 parser.add_argument("-m",
                     "--model_class", 
                     type=str)
+parser.add_argument("-lt",
+                    "--log_transform", 
+                    action='store_true')
 args = parser.parse_args()
+print(args.log_transform)
 
 model_class_name = args.model_class
 if model_class_name not in AVAILABLE_CLASSES:
@@ -42,7 +41,7 @@ print("[INFO] loading data")
 tic = time.time()
 train_data = pd.read_hdf('data/train_data.h5', 'train_data')
 train_data.rename({"timestamp":"ds", "meter_reading":"y"}, axis=1, inplace=True)
-if log_transform:
+if args.log_transform:
     train_data["y"] = np.log1p(train_data["y"].values)
 test_data = pd.read_hdf('data/test_data.h5', 'test_data')
 test_data.rename({"timestamp":"ds"}, axis=1, inplace=True)
@@ -89,7 +88,7 @@ for i,valid_index in enumerate(valid_indexes):
     print(f"[INFO] evaluating the model - fold: {i}")
     tic = time.time()
     valid_predictions = fcaster.predict(train_data.loc[valid_index, test_data.columns])
-    if log_transform:
+    if args.log_transform:
         valid_predictions["y_pred"] = np.expm1(valid_predictions["y_pred"].values)
     idx = valid_predictions.query("y_pred < 0").index
     valid_predictions.loc[idx, "y_pred"] = 0
@@ -104,7 +103,7 @@ for i,valid_index in enumerate(valid_indexes):
     print(f"[INFO] predicting - fold: {i}")
     tic = time.time()
     predictions = fcaster.predict(test_data)
-    if log_transform:
+    if args.log_transform:
         predictions["y_pred"] = np.expm1(predictions["y_pred"].values)
     idx = predictions.query("y_pred < 0").index
     predictions.loc[idx, "y_pred"] = 0
