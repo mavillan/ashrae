@@ -12,6 +12,7 @@ from config import get_model_params
 from scaling import target_transform, target_inverse_transform
 from precompute import precompute_features
 import optuna
+import copy
 
 
 # timestamp of the starting execution time
@@ -62,8 +63,8 @@ print(f"[INFO] time elapsed loading validation data: {(tac-tic)/60.} min.\n")
 
 print("[INFO] precomputing the features")
 tic = time.time()
-train_features_split, valid_features_split = precompute_features(train_data, valid_indexes, model_class_name)
-n_folds = len(train_features_split)
+models_by_fold = precompute_models(train_data, valid_indexes, model_class_name)
+n_folds = len(models_by_fold)
 tac = time.time()
 print(f"[INFO] time elapsed precomputing the features: {(tac-tic)/60.} min.\n")
 
@@ -91,9 +92,7 @@ def objective(trial):
     for fold in range(n_folds):
         print(f"[INFO] preparing the features - fold: {i}")
         tic = time.time()
-        train_features = train_features_split[fold]
-        valid_features = valid_features_split[fold]
-        fcaster.set_features(train_features, valid_features)
+        fcaster = copy.deepcopy(models_by_fold[fold])
         tac = time.time()
         print(f"[INFO] time elapsed preparing the features: {(tac-tic)/60.} min.\n")
 

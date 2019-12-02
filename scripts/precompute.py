@@ -2,9 +2,8 @@ from tsforest import forecaster
 from utils import reduce_mem_usage
 from config import get_model_params
 
-def precompute_features(train_data, valid_indexes, model_class_name):
-    train_features_split = list()
-    valid_features_split = list()
+def precompute_models(train_data, valid_indexes, model_class_name):
+    models_by_fold = list()
     
     model_kwargs = {"model_params":get_model_params(model_class_name),
                     "feature_sets":['calendar', 'calendar_cyclical'],
@@ -21,8 +20,8 @@ def precompute_features(train_data, valid_indexes, model_class_name):
     for i,valid_index in enumerate(valid_indexes):
         fcaster = model_class(**model_kwargs)
         fcaster.prepare_features(train_data=train_data, valid_index=valid_index)
-        train_features = reduce_mem_usage(fcaster.train_features)
-        valid_features = reduce_mem_usage(fcaster.valid_features)
-        train_features_split.append(train_features)
-        valid_features_split.append(valid_features)
-    return train_features_split, valid_features_split
+        fcaster.train_features = reduce_mem_usage(fcaster.train_features)
+        fcaster.valid_features = reduce_mem_usage(fcaster.valid_features)
+        model_by_fold.append(fcaster)
+
+    return models_by_fold
