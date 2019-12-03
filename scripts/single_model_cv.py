@@ -59,7 +59,7 @@ print(f"[INFO] time elapsed loading data: {(tac-tic)/60.} min.\n")
 
 print("[INFO] loading validation data")
 tic = time.time()
-h5f = h5py.File("data/valid_sm_custom1_4fold.h5", "r")
+h5f = h5py.File("data/valid_sm_custom_4fold.h5", "r")
 valid_indexes = [h5f[key][:] for key in h5f.keys()]
 h5f.close()
 tac = time.time()
@@ -90,7 +90,7 @@ for i,valid_index in enumerate(valid_indexes):
 
     print(f"[INFO] fitting the model - fold: {i}")
     tic = time.time()
-    fcaster.fit()
+    fcaster.fit(fit_kwargs={"verbose_eval":20})
     tac = time.time()
     print(f"[INFO] time elapsed fitting the model: {(tac-tic)/60.} min.\n")
 

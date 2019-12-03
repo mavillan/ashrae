@@ -13,7 +13,7 @@ def get_model_params(model_class_name):
         return {"boosting_type":"gbrt",
                 "objective":"regression",
                 "num_iterations":1000,
-                "early_stopping_round":50,
+                "early_stopping_rounds":50,
                 "num_leaves":724,
                 "min_data_in_leaf":20,
                 "learning_rate":0.3,
