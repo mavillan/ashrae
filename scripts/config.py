@@ -1,3 +1,5 @@
+import numpy as np
+
 def get_model_params(model_class_name):
     if model_class_name == "CatBoostForecaster":
         return {"iterations":1000,
@@ -12,7 +14,6 @@ def get_model_params(model_class_name):
                 "objective":"regression",
                 "num_iterations":1000,
                 "early_stopping_round":50,
-                "verbose_eval":10,
                 "num_leaves":724,
                 "min_data_in_leaf":20,
                 "learning_rate":0.3,
