@@ -1,3 +1,4 @@
+import os
 import sys
 import time
 import argparse
@@ -14,9 +15,7 @@ from precompute import precompute_model, precompute_models
 import optuna
 import copy
 
-# timestamp of the starting execution time
-timestamp = datetime.now().strftime("%Y/%m/%d, %H:%M:%S").replace("/","-").replace(" ","")
-
+# available methods
 AVAILABLE_CLASSES = ["CatBoostForecaster",
                      "LightGBMForecaster",
                      "XGBoostForecaster",
@@ -33,11 +32,14 @@ parser.add_argument("-m",
 parser.add_argument("-lt",
                     "--log_transform", 
                     action='store_true')
-parser.add_argument("-st",
-                    "--scale_transform", 
-                    action='store_true')
 args = parser.parse_args()
 
+if os.path.exists(f"./results/hs_all.csv"):
+    logger = open(f"./results/hs_all.csv", "a")
+else:
+    logger = open(f"./results/hs_all.csv", "w")
+    logger.write("trial;params;best_iteration;error\n")
+    
 model_class_name = args.model_class
 if model_class_name not in AVAILABLE_CLASSES:
     print(f"{model_class_name} is not a valid model class.")
@@ -46,22 +48,21 @@ model_class = getattr(forecaster, model_class_name)
 
 print("[INFO] loading data")
 tic = time.time()
-train_data = pd.read_hdf('../data/train_data.h5', 'train_data')
+# loading train data
+train_data = pd.read_hdf("./data/train_data.h5", "train_data")
 train_data.rename({"timestamp":"ds", "meter_reading":"y"}, axis=1, inplace=True)
-leak_data = (pd.read_feather("../data/leakage.feather")
+# loading leak data
+leak_data = (pd.read_feather("./data/leakage.feather")
              .pipe(reduce_mem_usage)
              .query("timestamp >= '2017-01-01 00:00:00'"))
 leak_data.rename({"timestamp":"ds", "meter_reading":"y"}, axis=1, inplace=True)
+# merge of both datasets
 train_data = (pd.concat([train_data, leak_data.loc[:, train_data.columns]])
               .reset_index(drop=True))
 valid_index = train_data.query("ds >= '2017-01-01 00:00:00'").index
 predict_columns = [feat for feat in train_data.columns if feat!="y"]
-
 if args.log_transform:
     train_data["y"] = np.log1p(train_data["y"].values)
-if args.scale_transform:
-    robust_scaler = pd.read_csv("data/robust_scaler.csv")
-    train_data = target_transform(train_data, robust_scaler, target="y")
 tac = time.time()
 print(f"[INFO] time elapsed loading data: {(tac-tic)/60.} min.\n")
 
@@ -83,7 +84,7 @@ print(f"[INFO] time elapsed precomputing the features: {(tac-tic)/60.} min.\n")
 def objective(trial):
     sampled_params = {
         "num_leaves":int(trial.suggest_loguniform('num_leaves', 2**6, 2**10+1)),
-        "learning_rate":trial.suggest_uniform('learning_rate', 0.05, 0.31),
+        "learning_rate":trial.suggest_uniform('learning_rate', 0.01, 0.1),
         "min_data_in_leaf":int(trial.suggest_discrete_uniform("min_data_in_leaf", 20, 40, 20)),
         "feature_fraction":trial.suggest_discrete_uniform("feature_fraction", 0.8, 1.0, 0.1),
         "lambda_l2":trial.suggest_discrete_uniform("lambda_l2", 0., 3.0, 1.0)
@@ -100,7 +101,7 @@ def objective(trial):
 
     print(f"[INFO] fitting the model")
     tic = time.time()
-    fcaster.fit(fit_kwargs={"verbose_eval":20})
+    fcaster.fit(fit_kwargs={"verbose_eval":10})
     tac = time.time()
     print(f"[INFO] time elapsed fitting the model: {(tac-tic)/60.} min.\n")
         
@@ -108,10 +109,12 @@ def objective(trial):
     best_iteration = fcaster.best_iteration
     print(f"[INFO] validation error: {valid_error}")
     print(f"[INFO] best iteration: {best_iteration}")
-    
+
+    logger.write(f"{trial.number};{sampled_params};{best_iteration};{valid_error}\n")
+    logger.flush()
     return valid_error
 
 study = optuna.create_study(direction='minimize')
 study.optimize(objective, n_trials=50)
 study_dataframe = study.trials_dataframe()
-study_dataframe.to_csv("results/study_03.csv")
+study_dataframe.to_csv("./results/study_hs_all.csv")

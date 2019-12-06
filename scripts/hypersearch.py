@@ -1,3 +1,4 @@
+import os
 import sys
 import time
 import argparse
@@ -14,9 +15,7 @@ from precompute import precompute_model, precompute_models
 import optuna
 import copy
 
-# timestamp of the starting execution time
-timestamp = datetime.now().strftime("%Y/%m/%d, %H:%M:%S").replace("/","-").replace(" ","")
-
+# available methods
 AVAILABLE_CLASSES = ["CatBoostForecaster",
                      "LightGBMForecaster",
                      "XGBoostForecaster",
@@ -37,6 +36,12 @@ parser.add_argument("-m",
                     "--meter, 
                     type=int)
 args = parser.parse_args()
+
+if os.path.exists(f"../results/hs_site{args.site}_meter{args.meter}.csv"):
+    logger = open(f"../results/hs_site{args.site}_meter{args.meter}.csv", "a")
+else:
+    logger = open(f"../results/hs_site{args.site}_meter{args.meter}.csv", "w")
+    logger.write("trial;params;best_iteration;error\n")
 
 model_class_name = args.model_class
 if model_class_name not in AVAILABLE_CLASSES:
@@ -61,8 +66,9 @@ train_data = (pd.concat([train_data, leak_data.loc[:, train_data.columns]])
               .reset_index(drop=True))
 train_data["y"] = np.log1p(train_data["y"].values)
 predict_columns = [feat for feat in train_data.columns if feat!="y"]
+
 if args.site == 0: 
-    pass
+    valid_index = train_data.query("ds >= '2017-05-21 00:00:00'").index
 else: 
     valid_index = train_data.query("ds >= '2017-01-01 00:00:00'").index
 tac = time.time()
@@ -84,8 +90,8 @@ print(f"[INFO] time elapsed precomputing the features: {(tac-tic)/60.} min.\n")
 def objective(trial):
     sampled_params = {
         "num_leaves":int(trial.suggest_discrete_uniform("num_leaves", 8, 32, 8)),
-        "learning_rate":trial.suggest_discrete_uniform("learning_rate", 0.005, 0.01, 0.005),
-        "min_data_in_leaf":int(trial.suggest_discrete_uniform("min_data_in_leaf", 20, 40, 20)),
+        "learning_rate":trial.suggest_discrete_uniform("learning_rate", 0.01, 0.1, 0.0025),
+        "min_data_in_leaf":int(trial.suggest_discrete_uniform("min_data_in_leaf", 5, 25, 10)),
         "feature_fraction":trial.suggest_discrete_uniform("feature_fraction", 0.8, 1.0, 0.1),
         "lambda_l2":trial.suggest_discrete_uniform("lambda_l2", 0., 3.0, 1.0)
     }
@@ -110,9 +116,12 @@ def objective(trial):
     print(f"[INFO] validation error: {valid_error}")
     print(f"[INFO] best iteration: {best_iteration}")
     
+    logger.write(f"{trial.number};{sampled_params};{best_iteration};{valid_error}\n")
+    logger.flush()
     return valid_error
 
 study = optuna.create_study(direction='minimize')
 study.optimize(objective, n_trials=100)
+logger.close()
 study_dataframe = study.trials_dataframe()
-study_dataframe.to_csv("results/study_03.csv")
+study_dataframe.to_csv(f"results/study_site{args.site}_meter{args.meter}.csv")
