@@ -5,6 +5,7 @@ import argparse
 import numpy as np
 import pandas as pd
 import h5py
+import copy
 from datetime import datetime
 from tsforest import forecaster
 from tsforest.metrics import compute_rmse, compute_rmsle
@@ -13,7 +14,7 @@ from config import get_model_params
 from scaling import target_transform, target_inverse_transform
 from precompute import precompute_model, precompute_models
 import optuna
-import copy
+from optuna.integration import LightGBMPruningCallback
 
 # available methods
 AVAILABLE_CLASSES = ["CatBoostForecaster",
@@ -22,8 +23,11 @@ AVAILABLE_CLASSES = ["CatBoostForecaster",
                      "H2OGBMForecaster"]
 
 # excluded features to avoid data leakage
-EXCLUDE_FEATURES = ["year","days_in_month","year_day",
-                    "month_day","year_day_cos","year_day_sin"]
+#EXCLUDE_FEATURES = ["year","days_in_month","year_day",
+#                    "month_day","year_day_cos","year_day_sin"]
+EXCLUDE_FEATURES = ["year","quarter","month","days_in_month","year_week","year_day",
+                    "month_day","year_day_cos","year_day_sin","year_week_cos",
+                    "year_week_sin","month_cos","month_sin","month_progress"]
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-m",
@@ -34,10 +38,10 @@ parser.add_argument("-lt",
                     action='store_true')
 args = parser.parse_args()
 
-if os.path.exists(f"./results/hs_all.csv"):
-    logger = open(f"./results/hs_all.csv", "a")
+if os.path.exists(f"./results/hs_all_reduced_calendar.csv"):
+    logger = open(f"./results/hs_all_reduced_calendar.csv", "a")
 else:
-    logger = open(f"./results/hs_all.csv", "w")
+    logger = open(f"./results/hs_all_reduced_calendar.csv", "w")
     logger.write("trial;params;best_iteration;error\n")
     
 model_class_name = args.model_class
@@ -83,9 +87,9 @@ print(f"[INFO] time elapsed precomputing the features: {(tac-tic)/60.} min.\n")
    
 def objective(trial):
     sampled_params = {
-        "num_leaves":int(trial.suggest_loguniform('num_leaves', 2**6, 2**10+1)),
-        "learning_rate":trial.suggest_uniform('learning_rate', 0.01, 0.1),
-        "min_data_in_leaf":int(trial.suggest_discrete_uniform("min_data_in_leaf", 20, 40, 20)),
+        "num_leaves":int(trial.suggest_loguniform('num_leaves', 2**5, 2**9+1)),
+        "learning_rate":trial.suggest_uniform('learning_rate', 0.005, 0.05),
+        "min_data_in_leaf":int(trial.suggest_discrete_uniform("min_data_in_leaf", 5, 50, 5)),
         "feature_fraction":trial.suggest_discrete_uniform("feature_fraction", 0.8, 1.0, 0.1),
         "lambda_l2":trial.suggest_discrete_uniform("lambda_l2", 0., 3.0, 1.0)
     }
@@ -101,7 +105,8 @@ def objective(trial):
 
     print(f"[INFO] fitting the model")
     tic = time.time()
-    fcaster.fit(fit_kwargs={"verbose_eval":10})
+    pruning_callback = LightGBMPruningCallback(trial, "l2", valid_name="valid_0")    
+    fcaster.fit(fit_kwargs={"verbose_eval":10, "callbacks":[pruning_callback]})
     tac = time.time()
     print(f"[INFO] time elapsed fitting the model: {(tac-tic)/60.} min.\n")
         
@@ -115,6 +120,6 @@ def objective(trial):
     return valid_error
 
 study = optuna.create_study(direction='minimize')
-study.optimize(objective, n_trials=50)
+study.optimize(objective, n_trials=500)
 study_dataframe = study.trials_dataframe()
-study_dataframe.to_csv("./results/study_hs_all.csv")
+study_dataframe.to_csv("./results/study_hs_all_reduced_calendar.csv")
