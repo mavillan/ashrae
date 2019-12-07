@@ -6,16 +6,27 @@ import pandas as pd
 from datetime import datetime
 from tsforest import forecaster
 from utils import reduce_mem_usage
-from config import get_model_params
 
+# default model params
+model_params = {"boosting_type":"gbrt",
+                "objective":"regression",
+                "num_iterations":50,
+                "early_stopping_rounds":50,
+                "num_leaves":906,
+                "min_data_in_leaf":15,
+                "learning_rate":0.07957690502164225,
+                "feature_fraction":0.8,
+                "lambda_l2":0.0,
+                "verbosity":1}
 # available methods
 AVAILABLE_CLASSES = ["CatBoostForecaster",
                      "LightGBMForecaster",
                      "XGBoostForecaster",
                      "H2OGBMForecaster"]
 # excluded features to avoid data leakage
-EXCLUDE_FEATURES = ["year","days_in_month","year_day",
-                    "month_day","year_day_cos","year_day_sin"]
+EXCLUDE_FEATURES = ["year","quarter","month","days_in_month","year_week","year_day",
+                    "month_day","year_day_cos","year_day_sin","year_week_cos",
+                    "year_week_sin","month_cos","month_sin","month_progress"]
 # energy conversion for site0
 kWh_to_kBTU = 3.4118
 # current time
@@ -53,7 +64,6 @@ idx_site0_meter0 = test_data.query("site_id==0 & meter==0").index
 tac = time.time()
 print(f"[INFO] time elapsed loading data: {(tac-tic)/60.} min.\n")
 
-model_params = get_model_params(model_class_name)
 print(f"[INFO] model_params: {model_params}")
 model_kwargs = {"model_params":model_params,
                 "feature_sets":["calendar", "calendar_cyclical"],
@@ -91,7 +101,7 @@ if args.log_transform:
     predictions["y_pred"] = np.expm1(predictions["y_pred"].values)
 idx = predictions.query("y_pred < 0").index
 predictions.loc[idx, "y_pred"] = 0
-predictions.loc[idx_site0_meter0, "meter_reading"] = kWh_to_kBTU*predictions.loc[idx_site0_meter0, "meter_reading"]
+predictions.loc[idx_site0_meter0, "y_pred"] = kWh_to_kBTU*predictions.loc[idx_site0_meter0, "y_pred"]
 tac = time.time()
 print(f"[INFO] time elapsed predicting: {(tac-tic)/60.} min.\n")
 
