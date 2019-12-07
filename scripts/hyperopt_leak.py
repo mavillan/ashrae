@@ -87,8 +87,8 @@ print(f"[INFO] time elapsed precomputing the features: {(tac-tic)/60.} min.\n")
    
 def objective(trial):
     sampled_params = {
-        "num_leaves":int(trial.suggest_loguniform('num_leaves', 2**5, 2**9+1)),
-        "learning_rate":trial.suggest_uniform('learning_rate', 0.005, 0.05),
+        "num_leaves":int(trial.suggest_loguniform('num_leaves', 2**5, 2**10+1)),
+        "learning_rate":trial.suggest_uniform('learning_rate', 0.005, 0.1),
         "min_data_in_leaf":int(trial.suggest_discrete_uniform("min_data_in_leaf", 5, 50, 5)),
         "feature_fraction":trial.suggest_discrete_uniform("feature_fraction", 0.8, 1.0, 0.1),
         "lambda_l2":trial.suggest_discrete_uniform("lambda_l2", 0., 3.0, 1.0)
