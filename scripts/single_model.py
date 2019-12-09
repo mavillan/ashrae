@@ -10,14 +10,15 @@ from utils import reduce_mem_usage
 # default model params
 model_params = {"boosting_type":"gbrt",
                 "objective":"regression",
-                "num_iterations":50,
+                "num_iterations":257,
                 "early_stopping_rounds":50,
-                "num_leaves":906,
-                "min_data_in_leaf":15,
-                "learning_rate":0.07957690502164225,
+                "num_leaves":586,
+                "min_data_in_leaf":45,
+                "learning_rate":0.020216925222770604,
                 "feature_fraction":0.8,
-                "lambda_l2":0.0,
+                "lambda_l2":1.0,
                 "verbosity":1}
+
 # available methods
 AVAILABLE_CLASSES = ["CatBoostForecaster",
                      "LightGBMForecaster",
