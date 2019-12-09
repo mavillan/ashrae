@@ -91,7 +91,7 @@ print(f"[INFO] time elapsed precomputing the features: {(tac-tic)/60.} min.\n")
    
 def objective(trial):
     sampled_params = {
-        "num_leaves":int(trial.suggest_discrete_uniform("num_leaves", 16, 256, 16)),
+        "num_leaves":trial.suggest_int("num_leaves", 16, 512),
         "min_data_in_leaf":int(trial.suggest_discrete_uniform("min_data_in_leaf", 5, 30, 5)),
         "feature_fraction":trial.suggest_discrete_uniform("feature_fraction", 0.7, 1.0, 0.1),
         "lambda_l2":trial.suggest_discrete_uniform("lambda_l2", 0., 3.0, 1.0)
@@ -109,8 +109,7 @@ def objective(trial):
 
     print(f"[INFO] fitting the model")
     tic = time.time()
-    pruning_callback = LightGBMPruningCallback(trial, "l2", valid_name="valid_0")
-    fcaster.fit(fit_kwargs={"verbose_eval":10, "callbacks":[pruning_callback]})
+    fcaster.fit(fit_kwargs={"verbose_eval":10})
     tac = time.time()
     print(f"[INFO] time elapsed fitting the model: {(tac-tic)/60.} min.\n")
         
@@ -124,7 +123,7 @@ def objective(trial):
     return valid_error
 
 study = optuna.create_study(direction='minimize')
-study.optimize(objective, n_trials=500)
+study.optimize(objective, n_trials=100)
 logger.close()
 study_dataframe = study.trials_dataframe()
 study_dataframe.to_csv(f"./results/study_meter{args.meter}_site{args.site}.csv")
