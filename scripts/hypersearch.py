@@ -22,8 +22,11 @@ AVAILABLE_CLASSES = ["CatBoostForecaster",
                      "H2OGBMForecaster"]
 
 # excluded features to avoid data leakage
-EXCLUDE_FEATURES = ["year","days_in_month","year_day",
-                    "month_day","year_day_cos","year_day_sin"]
+#EXCLUDE_FEATURES = ["year","days_in_month","year_day",
+#                    "month_day","year_day_cos","year_day_sin"]
+EXCLUDE_FEATURES = ["year","quarter","month","days_in_month","year_week","year_day",
+                    "month_day","year_day_cos","year_day_sin","year_week_cos",
+                    "year_week_sin","month_cos","month_sin","month_progress"]
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-m",

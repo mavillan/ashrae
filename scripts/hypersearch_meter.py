@@ -21,7 +21,6 @@ AVAILABLE_CLASSES = ["CatBoostForecaster",
                      "LightGBMForecaster",
                      "XGBoostForecaster",
                      "H2OGBMForecaster"]
-
 # excluded features to avoid data leakage
 #EXCLUDE_FEATURES = ["year","days_in_month","year_day",
 #                    "month_day","year_day_cos","year_day_sin"]
