@@ -1,0 +1,10 @@
+python scripts/hypersearch_meter_site.py --model_class LightGBMForecaster --meter 0 --site 0
+python scripts/hypersearch_meter_site.py --model_class LightGBMForecaster --meter 1 --site 0
+python scripts/hypersearch_meter_site.py --model_class LightGBMForecaster --meter 0 --site 1
+python scripts/hypersearch_meter_site.py --model_class LightGBMForecaster --meter 0 --site 2
+python scripts/hypersearch_meter_site.py --model_class LightGBMForecaster --meter 1 --site 2
+python scripts/hypersearch_meter_site.py --model_class LightGBMForecaster --meter 3 --site 2
+python scripts/hypersearch_meter_site.py --model_class LightGBMForecaster --meter 0 --site 4
+python scripts/hypersearch_meter_site.py --model_class LightGBMForecaster --meter 0 --site 15
+python scripts/hypersearch_meter_site.py --model_class LightGBMForecaster --meter 1 --site 15
+python scripts/hypersearch_meter_site.py --model_class LightGBMForecaster --meter 2 --site 15
