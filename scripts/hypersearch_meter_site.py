@@ -53,25 +53,23 @@ model_class = getattr(forecaster, model_class_name)
 print("[INFO] loading data")
 tic = time.time()
 # loading train data
-train_data = (pd.read_hdf("./data/train_data.h5", "train_data")
-              .query(f"meter == {args.meter} & site_id == {args.site}"))
+train_data = pd.read_csv(f"./mirrors/train_data_meter{args.meter}_site{args.site}.csv", parse_dates=["timestamp"])
 train_data.rename({"timestamp":"ds", "meter_reading":"y"}, axis=1, inplace=True)
 # loading leak data
-leak_data = (pd.read_feather("./data/leakage.feather")
-             .query(f"meter == {args.meter} & site_id == {args.site}")
-             .pipe(reduce_mem_usage)
+leak_data = (pd.read_csv(f"./mirrors/leak_data_meter{args.meter}_site{args.site}.csv", parse_dates=["timestamp"])
              .query("timestamp >= '2017-01-01 00:00:00'"))
 leak_data.rename({"timestamp":"ds", "meter_reading":"y"}, axis=1, inplace=True)
 # merge of both datasets
 train_data = (pd.concat([train_data, leak_data.loc[:, train_data.columns]])
               .reset_index(drop=True))
-predict_columns = [feat for feat in train_data.columns if feat!="y"]
+train_data["square_feet"] = np.log1p(train_data["square_feet"].values)
 train_data["y"] = np.log1p(train_data["y"].values)
 # index for validation data
-if args.site == 0: 
-    valid_index = train_data.query("ds >= '2017-05-21 00:00:00'").index
-else: 
-    valid_index = train_data.query("ds >= '2017-01-01 00:00:00'").index
+valid_index = train_data.query("site_id != 0 & ds >= '2017-01-01 00:00:00'").index
+valid_index = valid_index.union(train_data.query("site_id == 0 & ds >= '2017-05-21 00:00:00'").index)
+# removes not useful columns
+train_data.drop(["site_id","meter"], axis=1, inplace=True)
+predict_columns = [feat for feat in train_data.columns if feat!="y"]
 tac = time.time()
 print(f"[INFO] time elapsed loading data: {(tac-tic)/60.} min.\n")
 
@@ -80,7 +78,6 @@ tic = time.time()
 model_kwargs = {"feature_sets":['calendar', 'calendar_cyclical'],
                 "exclude_features":EXCLUDE_FEATURES,
                 "categorical_features":{"building_id":"default",
-                                        "site_id":"default",
                                         "primary_use":"default"},
                 "ts_uid_columns":["building_id"],
                 "detrend":False,
@@ -91,7 +88,7 @@ print(f"[INFO] time elapsed precomputing the features: {(tac-tic)/60.} min.\n")
    
 def objective(trial):
     sampled_params = {
-        "num_leaves":trial.suggest_int("num_leaves", 16, 512),
+        "num_leaves":trial.suggest_int("num_leaves", 32, 1024),
         "min_data_in_leaf":int(trial.suggest_discrete_uniform("min_data_in_leaf", 5, 30, 5)),
         "feature_fraction":trial.suggest_discrete_uniform("feature_fraction", 0.7, 1.0, 0.1),
         "lambda_l2":trial.suggest_discrete_uniform("lambda_l2", 0., 3.0, 1.0)
@@ -109,7 +106,7 @@ def objective(trial):
 
     print(f"[INFO] fitting the model")
     tic = time.time()
-    fcaster.fit(fit_kwargs={"verbose_eval":10})
+    fcaster.fit(fit_kwargs={"verbose_eval":20})
     tac = time.time()
     print(f"[INFO] time elapsed fitting the model: {(tac-tic)/60.} min.\n")
         
@@ -125,5 +122,3 @@ def objective(trial):
 study = optuna.create_study(direction='minimize')
 study.optimize(objective, n_trials=100)
 logger.close()
-study_dataframe = study.trials_dataframe()
-study_dataframe.to_csv(f"./results/study_meter{args.meter}_site{args.site}.csv")
