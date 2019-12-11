@@ -89,8 +89,8 @@ for _,row in uid_partition.iterrows():
     tac = time.time()
     print(f"[INFO] time elapsed fitting the model: {(tac-tic)/60.} min.\n")
 
-    logger.write(f"model_params meter{meter}: {fcaster.model_params}\n")
-    logger.write(f"input_features meter{meter}: {fcaster.input_features}\n")
+    logger.write(f"model_params meter{row.meter}-site{row.site_id}: {fcaster.model_params}\n")
+    logger.write(f"input_features meter{row.meter}-site{row.site_id}: {fcaster.input_features}\n")
 
     print("[INFO] predicting")
     tic = time.time()
