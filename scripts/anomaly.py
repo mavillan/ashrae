@@ -18,6 +18,7 @@ def moving_average(data, window_size):
     window = np.ones(int(window_size))/float(window_size)
     return np.convolve(data, window, "same")
 
+
 def anomaly_detector(y, window_size=10, sigma=2.0):
     """ 
     Identifies anomalies in TS data through rolling std
@@ -46,3 +47,26 @@ def anomaly_detector(y, window_size=10, sigma=2.0):
            index, y_i, avg_i, rs_i in zip(count(),y,avg_list,rolling_std) 
            if (y_i > avg_i + (sigma * rs_i)) | (y_i < avg_i - (sigma * rs_i))]
     return ret
+
+
+def find_outliers(ts, window, threshold, periodic_borders=False):
+    assert window%2 == 1, "Parameter 'window' must be odd."
+    ts_lenght = len(ts)
+    if periodic_borders:
+        ts_ext = pd.concat([ts.tail(window//2), ts, ts.head(window//2)], ignore_index=True)
+        rw = ts_ext.y.rolling(window, center=True)
+        rw_median = (rw.median()
+                     .loc[window//2:ts_lenght-1+window//2]
+                     .reset_index(drop=True))
+        rw_iqr = ((rw.quantile(0.75)-rw.quantile(0.25))
+                  .loc[window//2:ts_lenght-1+window//2]
+                  .reset_index(drop=True))
+    else:
+        rw = ts.y.rolling(window, center=True)
+        rw_median = (rw.median()
+                     .interpolate(method="linear", limit_direction="both"))
+        rw_iqr = ((rw.quantile(0.75)-rw.quantile(0.25))
+                  .interpolate(method="linear", limit_direction="both"))
+    outlier_idx1 = ts.query("y > @rw_median + @threshold*@rw_iqr").index
+    outlier_idx2 = ts.query("y < @rw_median - @threshold*@rw_iqr").index
+    return outlier_idx1.union(outlier_idx2)
