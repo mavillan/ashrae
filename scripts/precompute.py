@@ -7,7 +7,8 @@ def precompute_model(train_data, valid_index, model_class_name, model_kwargs):
     fcaster = model_class(**model_kwargs)
     fcaster.prepare_features(train_data=train_data, valid_index=valid_index)
     fcaster.train_features = reduce_mem_usage(fcaster.train_features)
-    fcaster.valid_features = reduce_mem_usage(fcaster.valid_features)
+    if valid_index is not None:
+        fcaster.valid_features = reduce_mem_usage(fcaster.valid_features)
     return fcaster
 
 def precompute_models(train_data, valid_indexes, model_class_name, model_kwargs):

@@ -12,12 +12,12 @@ def get_model_params(model_class_name):
     elif model_class_name == "LightGBMForecaster":
         return {"boosting_type":"gbrt",
                 "objective":"regression",
-                "num_iterations":1000,
+                "num_iterations":500,
                 "early_stopping_rounds":50,
                 "num_leaves":512,
-                "min_data_in_leaf":20,
-                "learning_rate":0.2,
-                "feature_fraction":0.9,
+                "min_data_in_leaf":10,
+                "learning_rate":0.01,
+                "feature_fraction":0.7,
                 "lambda_l2":1.0,
                 "verbosity":1}
     elif model_class_name == "XGBoostForecaster":
