@@ -18,7 +18,7 @@ AVAILABLE_CLASSES = ["CatBoostForecaster",
                      "XGBoostForecaster",
                      "H2OGBMForecaster"]
 # excluded features to avoid data leakage
-EXCLUDE_FEATURES = ["year","quarter","month","days_in_month","year_week","year_day",
+EXCLUDE_FEATURES = ["year","month","days_in_month","year_week","year_day",
                     "month_day","year_day_cos","year_day_sin","year_week_cos",
                     "year_week_sin","month_cos","month_sin","month_progress"]
 # energy conversion for site0
@@ -63,10 +63,6 @@ only_in_leak = (pd.merge(buildings_in_leak, buildings_in_train, how="left", indi
 leak_augmentation = pd.merge(leak_data.query("'2017-01-01 00:00:00' <= ds <= '2017-05-20 18:00:00'"),
                              only_in_leak, how="inner")
 train_data = pd.concat([train_data, leak_augmentation.loc[:, train_data.columns]])
-# meter_reading transform
-if args.log_transform:
-    train_data["y"] = np.log1p(train_data["y"].values)
-    train_data["square_feet"] = np.log1p(train_data["square_feet"].values)
 # loading test data
 test_data = pd.read_hdf('data/test_data.h5', 'test_data')
 test_data.rename({"timestamp":"ds"}, axis=1, inplace=True)
@@ -74,12 +70,20 @@ test_data.rename({"timestamp":"ds"}, axis=1, inplace=True)
 idx_site0_meter0 = test_data.query("site_id==0 & meter==0").index
 idx_building1099_meter2 = test_data.query("building_id==1099 & meter==2").index
 tac = time.time()
+# log transformations
+if args.log_transform:
+    train_data["y"] = np.log1p(train_data["y"].values)
+    train_data["square_feet"] = np.log1p(train_data["square_feet"].values)
+    train_data["median_reading"] = np.log1p(train_data["median_reading"].values)
+    test_data["square_feet"] = np.log1p(test_data["square_feet"].values)
+    test_data["median_reading"] = np.log1p(test_data["median_reading"].values)
 print(f"[INFO] time elapsed loading data: {(tac-tic)/60.} min.\n")
 
 model_kwargs = {"feature_sets":["calendar", "calendar_cyclical"],
                 "exclude_features":EXCLUDE_FEATURES,
                 "categorical_features":{"building_id":"default",
-                                        "primary_use":"default"},
+                                        "primary_use":"default",
+                                        "quarter":"default"},
                 "ts_uid_columns":["building_id"],
                 "detrend":False,
                 "target_scaler":None}
@@ -87,17 +91,23 @@ model_kwargs = {"feature_sets":["calendar", "calendar_cyclical"],
 all_predictions = list()
 uid_partition = train_data.loc[:, ["meter","site_id"]].drop_duplicates().sort_values(["meter","site_id"])
 for _,row in uid_partition.iterrows():
+    print("-"*100)
+    ticc = time.time()
     print(f"[INFO] Building predictions for meter{row.meter}-site{row.site_id}")
     train_data_ = train_data.query("meter==@row.meter & site_id==@row.site_id")
+    train_data_.is_copy = None
+    train_data_.drop(["meter","site_id"], axis=1, inplace=True)
     test_data_ = test_data.query("meter==@row.meter & site_id==@row.site_id")
+    test_data_.is_copy = None
+    test_data_.drop(["meter", "site_id"], axis=1, inplace=True)
     
+    print("[INFO] preparing the features")
+    tic = time.time()
     default_model_params = get_model_params(model_class_name)
     best_model_params = hyperparams[f"meter{row.meter}-site{row.site_id}"]
     model_params = {**default_model_params, **best_model_params}
     model_params["learning_rate"] = 0.01
-
-    print("[INFO] preparing the features")
-    tic = time.time()
+    
     model_kwargs["model_params"] = model_params
     fcaster = model_class(**model_kwargs)
     fcaster.prepare_features(train_data = train_data_)
@@ -122,6 +132,9 @@ for _,row in uid_partition.iterrows():
     all_predictions.append(predictions)
     tac = time.time()
     print(f"[INFO] time elapsed predicting: {(tac-tic)/60.} min.\n")
+    tacc = time.time()
+    print(f"[INFO] total elapsed time: {(tacc-ticc)/60.} min")
+    print("-"*100)
 
 predictions = (pd.merge(test_data, pd.concat(all_predictions), how="left",
                         left_on=["ds", "building_id", "meter"],
