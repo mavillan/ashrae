@@ -22,7 +22,7 @@ AVAILABLE_CLASSES = ["CatBoostForecaster",
                      "XGBoostForecaster",
                      "H2OGBMForecaster"]
 # excluded features to avoid data leakage
-EXCLUDE_FEATURES = ["year","quarter","month","days_in_month","year_week","year_day",
+EXCLUDE_FEATURES = ["year","month","days_in_month","year_week","year_day",
                     "month_day","year_day_cos","year_day_sin","year_week_cos",
                     "year_week_sin","month_cos","month_sin","month_progress"]
 
@@ -62,6 +62,7 @@ leak_data.rename({"timestamp":"ds", "meter_reading":"y"}, axis=1, inplace=True)
 # merge of both datasets
 train_data = (pd.concat([train_data, leak_data.loc[:, train_data.columns]])
               .reset_index(drop=True))
+train_data["median_reading"] = np.log1p(train_data["median_reading"].values)
 train_data["square_feet"] = np.log1p(train_data["square_feet"].values)
 train_data["y"] = np.log1p(train_data["y"].values)
 # index for validation data
@@ -90,8 +91,9 @@ def objective(trial):
     sampled_params = {
         "num_leaves":trial.suggest_int("num_leaves", 32, 1024),
         "min_data_in_leaf":int(trial.suggest_discrete_uniform("min_data_in_leaf", 5, 30, 5)),
-        "feature_fraction":trial.suggest_discrete_uniform("feature_fraction", 0.7, 1.0, 0.1),
-        "lambda_l2":trial.suggest_discrete_uniform("lambda_l2", 0., 3.0, 1.0)
+        "feature_fraction":trial.suggest_discrete_uniform("feature_fraction", 0.5, 1.0, 0.1),
+        "feature_fraction_bynode":trial.suggest_discrete_uniform("feature_fraction_bynode", 0.9, 1.0, 0.05),
+        "lambda_l2":trial.suggest_discrete_uniform("lambda_l2", 0., 5.0, 1.0)
     }
     default_model_params = get_model_params(model_class_name)
     model_params = {**default_model_params, **sampled_params}
