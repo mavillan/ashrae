@@ -3,30 +3,36 @@ import numpy as np
 def get_model_params(model_class_name):
     if model_class_name == "CatBoostForecaster":
         return {"iterations":1000,
-                "learning_rate":0.3,
-                "l2_leaf_reg":2.0,
+                "early_stopping_rounds":50,
+                "learning_rate":0.01,
+                "l2_leaf_reg":1.0,
                 "depth":6,
                 "has_time":False,
                 "bootstrap_type":"No",
-                "logging_level":"Info"}
+                "logging_level":"Info",
+                "use_best_model":True}
     elif model_class_name == "LightGBMForecaster":
         return {"boosting_type":"gbrt",
                 "objective":"regression",
                 "num_iterations":1000,
                 "early_stopping_rounds":50,
                 "num_leaves":512,
-                "min_data_in_leaf":20,
-                "learning_rate":0.2,
-                "feature_fraction":0.9,
+                "min_data_in_leaf":5,
+                "learning_rate":0.01,
+                "feature_fraction":0.7,
                 "lambda_l2":1.0,
                 "verbosity":1}
     elif model_class_name == "XGBoostForecaster":
         return {"objective":"reg:squarederror",
-                "learning_rate":0.3,
+                "eval_metric":"rmse",
+                "num_boost_round":1000,
+                "early_stopping_rounds":50,
+                "learning_rate":0.01,
                 "max_depth":6,
                 "lambda":1,
-                "num_boost_round":1000,
-                "verbosity":2}
+                "min_child_weight":1,
+                "colsample_bytree":0.7,
+                "verbosity":1}
     elif model_class_name == "H2OGBMForecaster":
         return {"ntrees":1000,
                 "max_depth":6,
