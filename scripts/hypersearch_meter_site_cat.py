@@ -66,8 +66,14 @@ train_data["median_reading"] = np.log1p(train_data["median_reading"].values)
 train_data["square_feet"] = np.log1p(train_data["square_feet"].values)
 train_data["y"] = np.log1p(train_data["y"].values)
 # index for validation data
-valid_index = train_data.query("site_id != 0 & ds >= '2017-01-01 00:00:00'").index
-valid_index = valid_index.union(train_data.query("site_id == 0 & ds >= '2017-05-21 00:00:00'").index)
+if args.meter==0:
+    valid_index = train_data.query("site_id != 0 & ds >= '2017-01-01 00:00:00'").index
+    valid_index = valid_index.union(train_data.query("site_id == 0 & ds >= '2017-05-21 00:00:00'").index)
+elif args.meter==1:
+    valid_index = train_data.query("site_id != 0 & ds >= '2017-01-01 00:00:00'").index
+    valid_index = valid_index.union(train_data.query("site_id == 0 & ds >= '2017-03-01 00:00:00'").index)
+else:
+    valid_index = train_data.query("ds >= '2017-01-01 00:00:00'").index
 # removes not useful columns
 train_data.drop(["site_id","meter"], axis=1, inplace=True)
 predict_columns = [feat for feat in train_data.columns if feat!="y"]
