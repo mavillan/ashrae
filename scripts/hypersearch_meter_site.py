@@ -90,7 +90,7 @@ print(f"[INFO] time elapsed precomputing the features: {(tac-tic)/60.} min.\n")
 def objective(trial):
     sampled_params = {
         "num_leaves":trial.suggest_int("num_leaves", 32, 1024),
-        "min_data_in_leaf":int(trial.suggest_discrete_uniform("min_data_in_leaf", 5, 30, 5)),
+        "min_data_in_leaf":trial.suggest_int("min_data_in_leaf", 1, 30),
         "feature_fraction":trial.suggest_discrete_uniform("feature_fraction", 0.5, 1.0, 0.1),
         "feature_fraction_bynode":trial.suggest_discrete_uniform("feature_fraction_bynode", 0.9, 1.0, 0.05),
         "lambda_l2":trial.suggest_discrete_uniform("lambda_l2", 0., 5.0, 1.0)
@@ -122,5 +122,5 @@ def objective(trial):
     return valid_error
 
 study = optuna.create_study(direction='minimize')
-study.optimize(objective, n_trials=100)
+study.optimize(objective, n_trials=50)
 logger.close()
