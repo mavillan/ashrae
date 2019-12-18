@@ -42,7 +42,7 @@ def get_model_params(model_class_name):
                 "nbins":20,
                 "learn_rate":0.01,
                 "stopping_metric":"rmse",
-                "col_sample_rate":0.7,
+                "col_sample_rate_per_tree":0.,
                 "min_rows":20,
                 "distribution":"gaussian"}
 
