@@ -2,19 +2,22 @@ import numpy as np
 
 def get_model_params(model_class_name):
     if model_class_name == "CatBoostForecaster":
-        return {"iterations":1000,
+        return {"loss_function":"RMSE",
+                "eval_metric":"RMSE",
+                "iterations":1000,
                 "early_stopping_rounds":50,
                 "learning_rate":0.01,
                 "l2_leaf_reg":1.0,
                 "depth":6,
                 "has_time":False,
                 "bootstrap_type":"No",
-                "logging_level":"Info",
-                "use_best_model":True}
+                "use_best_model":True,
+                "logging_level":"Verbose"}
     elif model_class_name == "LightGBMForecaster":
         return {"boosting_type":"gbrt",
                 "objective":"regression",
-                "num_iterations":500,
+                "metric":"rmse",
+                "num_iterations":1000,
                 "early_stopping_rounds":50,
                 "num_leaves":512,
                 "min_data_in_leaf":5,
@@ -37,15 +40,12 @@ def get_model_params(model_class_name):
         return {"ntrees":1000,
                 "max_depth":6,
                 "nbins":20,
-                "learn_rate":0.3,
-                "stopping_metric":"mse",
-                "score_each_iteration":True,
-                "categorical_encoding":"enum",
-                "sample_rate":1.0,
-                "col_sample_rate":1.0,
+                "learn_rate":0.01,
+                "stopping_metric":"rmse",
+                "col_sample_rate":0.7,
                 "min_rows":20,
                 "distribution":"gaussian",
-                "verbose":True}
+                "verbose":"TRUE"}
 
 
 def get_gs_hyperparams(model_class_name):

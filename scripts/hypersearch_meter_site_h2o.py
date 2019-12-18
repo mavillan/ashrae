@@ -14,7 +14,6 @@ from config import get_model_params
 from scaling import target_transform, target_inverse_transform
 from precompute import precompute_model, precompute_models
 import optuna
-from optuna.integration import LightGBMPruningCallback
 
 # available methods
 AVAILABLE_CLASSES = ["CatBoostForecaster",
@@ -38,10 +37,10 @@ parser.add_argument("-st",
                     type=int)
 args = parser.parse_args()
 
-if os.path.exists(f"./results/hs_cat_meter{args.meter}_site{args.site}.csv"):
-    logger = open(f"./results/hs_cat_meter{args.meter}_site{args.site}.csv", "a")
+if os.path.exists(f"./results/hs_h2o_meter{args.meter}_site{args.site}.csv"):
+    logger = open(f"./results/hs_h2o_meter{args.meter}_site{args.site}.csv", "a")
 else:
-    logger = open(f"./results/hs_cat_meter{args.meter}_site{args.site}.csv", "w")
+    logger = open(f"./results/hs_h2o_meter{args.meter}_site{args.site}.csv", "w")
     logger.write("trial;params;best_iteration;error\n")
 
 model_class_name = args.model_class
@@ -84,8 +83,8 @@ print("[INFO] precomputing the model")
 tic = time.time()
 model_kwargs = {"feature_sets":['calendar', 'calendar_cyclical'],
                 "exclude_features":EXCLUDE_FEATURES,
-                "categorical_features":{"building_id":"default",
-                                        "primary_use":"default"},
+                "categorical_features":{"building_id":"CatBoostEncoder",
+                                        "primary_use":"CatBoostEncoder"},
                 "ts_uid_columns":["building_id"],
                 "detrend":False,
                 "target_scaler":None}
@@ -94,15 +93,15 @@ tac = time.time()
 print(f"[INFO] time elapsed precomputing the features: {(tac-tic)/60.} min.\n")
    
 def objective(trial):
+    default_model_params = get_model_params(model_class_name)                                      
     sampled_params = {
-        "depth":trial.suggest_int("depth", 5, 12),
-        "l2_leaf_reg":trial.suggest_discrete_uniform("l2_leaf_reg", 0., 5.0, 1.0),
-        "bootstrap_type":trial.suggest_categorical('bootstrap_type', ['No', 'Bayesian']),
-        "rsm":trial.suggest_discrete_uniform("rsm", 0.8, 1.0, 0.05),
+        "max_depth":trial.suggest_int("max_depth", 5, 10),
+        "min_rows":trial.suggest_int("min_rows", 1, 30),
+        "nbins":trial.suggest_int("nbins", 20, 256),
+        "col_sample_rate_per_level":trial.suggest_discrete_uniform("col_sample_rate_per_level", 0.5, 1.0, 0.1)
     }
-    default_model_params = get_model_params(model_class_name)
-    model_params = {**default_model_params, **sampled_params, **_sampled_params}
-    model_params["learning_rate"] = 0.01
+    model_params = {**default_model_params, **sampled_params}
+    model_params["learn_rate"] = 0.01
 
     print(f"[INFO] preparing the features")
     tic = time.time()
@@ -117,7 +116,7 @@ def objective(trial):
     tac = time.time()
     print(f"[INFO] time elapsed fitting the model: {(tac-tic)/60.} min.\n")
         
-    valid_error = fcaster.model.model.best_score_["validation"]["RMSE"]
+    valid_error = fcaster.evaluate(train_data.loc[valid_index, :], metric="rmse")
     best_iteration = fcaster.best_iteration
     print(f"[INFO] validation error: {valid_error}")
     print(f"[INFO] best iteration: {best_iteration}")

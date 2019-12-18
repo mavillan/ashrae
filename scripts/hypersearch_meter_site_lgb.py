@@ -38,10 +38,10 @@ parser.add_argument("-st",
                     type=int)
 args = parser.parse_args()
 
-if os.path.exists(f"./results/hs_meter{args.meter}_site{args.site}.csv"):
-    logger = open(f"./results/hs_meter{args.meter}_site{args.site}.csv", "a")
+if os.path.exists(f"./results/hs_lgb_meter{args.meter}_site{args.site}.csv"):
+    logger = open(f"./results/hs_lgb_meter{args.meter}_site{args.site}.csv", "a")
 else:
-    logger = open(f"./results/hs_meter{args.meter}_site{args.site}.csv", "w")
+    logger = open(f"./results/hs_lgb_meter{args.meter}_site{args.site}.csv", "w")
     logger.write("trial;params;best_iteration;error\n")
 
 model_class_name = args.model_class
@@ -118,7 +118,7 @@ def objective(trial):
     tac = time.time()
     print(f"[INFO] time elapsed fitting the model: {(tac-tic)/60.} min.\n")
         
-    valid_error = (fcaster.model.model.best_score["valid_0"]["l2"])**0.5
+    valid_error = fcaster.model.model.best_score["valid_0"]["rmse"]
     best_iteration = fcaster.best_iteration
     print(f"[INFO] validation error: {valid_error}")
     print(f"[INFO] best iteration: {best_iteration}")
