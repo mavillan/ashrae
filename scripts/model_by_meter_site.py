@@ -48,28 +48,29 @@ tic = time.time()
 # loading train data
 train_data = pd.read_hdf("./data/train_data.h5", "train_data")
 train_data.rename({"timestamp":"ds", "meter_reading":"y"}, axis=1, inplace=True)
-# augmentation of site0 training data with leak data
+# loading leak data
 leak_data = pd.read_hdf("./data/leak_data.h5", "leak_data")
 leak_data.rename({"timestamp":"ds", "meter_reading":"y"}, axis=1, inplace=True)
-buildings_in_train = (train_data.query("site_id==0 & ds < '2016-05-20 00:00:00'")
-                      .loc[:, ["building_id","meter"]]
-                      .drop_duplicates())
-buildings_in_leak = (leak_data.query("site_id==0 & '2017-01-01 00:00:00' <= ds <= '2017-05-20 00:00:00'")
-                     .loc[:, ["building_id","meter"]]
-                     .drop_duplicates())
-only_in_leak = (pd.merge(buildings_in_leak, buildings_in_train, how="left", indicator=True)
-                .query("_merge == 'left_only'")
-                .drop("_merge", axis=1))
-leak_augmentation = pd.merge(leak_data.query("'2017-01-01 00:00:00' <= ds <= '2017-05-20 18:00:00'"),
-                             only_in_leak, how="inner")
-train_data = pd.concat([train_data, leak_augmentation.loc[:, train_data.columns]])
+# performing leak data augmentation
+for year in [2018,2017]:
+    leak_data_ = leak_data.query("ds.dt.year == @year")
+    leak_data_.is_copy = None
+    offset = 1 if year==2017 else 2
+    leak_data_.ds = leak_data_.ds - pd.DateOffset(years=offset)
+    # data to augment
+    mrg = (pd.merge(train_data.loc[:, ["building_id","meter","ds"]], leak_data_, 
+                    how="right", on=["building_id","meter","ds"], indicator=True)
+           .query("_merge == 'right_only'"))
+    mrg.drop("_merge", axis=1, inplace=True)
+    print(f"[INFO] Number of rows to augment from year {year}: {len(mrg)}")
+    train_data = pd.concat([train_data, mrg])
+train_data.reset_index(drop=True, inplace=True)
 # loading test data
 test_data = pd.read_hdf('data/test_data.h5', 'test_data')
 test_data.rename({"timestamp":"ds"}, axis=1, inplace=True)
 # index of test data where to apply meter_reading corrections
 idx_site0_meter0 = test_data.query("site_id==0 & meter==0").index
 idx_building1099_meter2 = test_data.query("building_id==1099 & meter==2").index
-tac = time.time()
 # log transformations
 if args.log_transform:
     train_data["y"] = np.log1p(train_data["y"].values)
@@ -77,13 +78,13 @@ if args.log_transform:
     train_data["median_reading"] = np.log1p(train_data["median_reading"].values)
     test_data["square_feet"] = np.log1p(test_data["square_feet"].values)
     test_data["median_reading"] = np.log1p(test_data["median_reading"].values)
+tac = time.time()
 print(f"[INFO] time elapsed loading data: {(tac-tic)/60.} min.\n")
 
 model_kwargs = {"feature_sets":["calendar", "calendar_cyclical"],
                 "exclude_features":EXCLUDE_FEATURES,
                 "categorical_features":{"building_id":"default",
-                                        "primary_use":"default",
-                                        "quarter":"default"},
+                                        "primary_use":"default"},
                 "ts_uid_columns":["building_id"],
                 "detrend":False,
                 "target_scaler":None}
