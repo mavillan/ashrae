@@ -96,13 +96,15 @@ print(f"[INFO] time elapsed precomputing the features: {(tac-tic)/60.} min.\n")
 def objective(trial):
     sampled_params = {
         "num_leaves":trial.suggest_int("num_leaves", 32, 1024),
-        "min_data_in_leaf":trial.suggest_int("min_data_in_leaf", 1, 30),
+        "min_data_in_leaf":int(trial.suggest_discrete_uniform("min_data_in_leaf", 5, 50, 5)),
         "feature_fraction":trial.suggest_discrete_uniform("feature_fraction", 0.5, 1.0, 0.1),
         "feature_fraction_bynode":trial.suggest_discrete_uniform("feature_fraction_bynode", 0.9, 1.0, 0.05),
+        "bagging_fraction":trial.suggest_discrete_uniform("bagging_fraction", 0.75, 1.0, 0.05),
         "lambda_l2":trial.suggest_discrete_uniform("lambda_l2", 0., 5.0, 1.0)
     }
     default_model_params = get_model_params(model_class_name)
     model_params = {**default_model_params, **sampled_params}
+    model_params["bagging_freq"] = 1
     model_params["learning_rate"] = 0.01
 
     print(f"[INFO] preparing the features")
