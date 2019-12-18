@@ -44,8 +44,7 @@ def get_model_params(model_class_name):
                 "stopping_metric":"rmse",
                 "col_sample_rate":0.7,
                 "min_rows":20,
-                "distribution":"gaussian",
-                "verbose":"TRUE"}
+                "distribution":"gaussian"}
 
 
 def get_gs_hyperparams(model_class_name):

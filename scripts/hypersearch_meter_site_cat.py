@@ -101,7 +101,7 @@ def objective(trial):
         "rsm":trial.suggest_discrete_uniform("rsm", 0.8, 1.0, 0.05),
     }
     default_model_params = get_model_params(model_class_name)
-    model_params = {**default_model_params, **sampled_params, **_sampled_params}
+    model_params = {**default_model_params, **sampled_params}
     model_params["learning_rate"] = 0.01
 
     print(f"[INFO] preparing the features")

@@ -98,7 +98,7 @@ def objective(trial):
         "max_depth":trial.suggest_int("max_depth", 5, 10),
         "min_rows":trial.suggest_int("min_rows", 1, 30),
         "nbins":trial.suggest_int("nbins", 20, 256),
-        "col_sample_rate_per_level":trial.suggest_discrete_uniform("col_sample_rate_per_level", 0.5, 1.0, 0.1)
+        "col_sample_rate_per_tree":trial.suggest_discrete_uniform("col_sample_rate_per_tree", 0.5, 1.0, 0.1)
     }
     model_params = {**default_model_params, **sampled_params}
     model_params["learn_rate"] = 0.01
