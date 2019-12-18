@@ -135,10 +135,13 @@ model_kwargs = {"feature_sets":["calendar", "calendar_cyclical"],
 
 all_predictions = list()
 for meter in range(0,4):
+    print(f"[INFO] processing data for meter: {meter}")
     train_data_ = train_data.query("meter == @meter")
     test_data_ = test_data.query("meter == @meter")
     
-    # computing the fold_idx
+    print("[INFO] computing the fold_idx")
+    tic = time.time()
+    train_data_.is_copy = None
     train_data_["year_day"] = train_data_.ds.dt.dayofyear
     train_data_["month"] = train_data_.ds.dt.month
     train_data_["fold_idx"] = -1
@@ -152,6 +155,8 @@ for meter in range(0,4):
             idx = train_data_cut.query("year_day in @days_by_fold").index.values
             train_data_.loc[idx, "fold_idx"] = i
     train_data_.drop(["year_day","month","meter"], axis=1, inplace=True)
+    tac = time.time()
+    print(f"[INFO] time elapsed computing the fold_idx: {(tac-tic)/60.} min.\n")
 
     print("[INFO] preparing the features")
     tic = time.time()
@@ -166,6 +171,7 @@ for meter in range(0,4):
     tic = time.time()
     fcaster.fit()
     tac = time.time()
+    print(f"[INFO] model best iteration: {fcaster.best_iteration}")
     print(f"[INFO] time elapsed fitting the model: {(tac-tic)/60.} min.\n")
 
     logger.write(f"model_params meter{meter}: {fcaster.model_params}\n")
